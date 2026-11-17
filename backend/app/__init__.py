@@ -1,57 +1,35 @@
-
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask
+from dotenv import load_dotenv
 
 from app.config import Config
 from app.extensions import db, migrate
 
-
 def create_app(config_class=Config):
+    load_dotenv()
 
     app = Flask(__name__)
-
     app.config.from_object(config_class)
 
-    # Initialize extensions
     db.init_app(app)
+
+    # Register all SQLAlchemy models
+    from app import models
+
     migrate.init_app(app, db)
 
-    # Configure CORS
-    CORS(
-        app,
-        resources={
-            r"/api/*": {
-                "origins": ["http://localhost:5173"]
-            }
-        }
-    )
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
 
-    # Root endpoint
-    @app.get("/")
-    def index():
-        return jsonify({
-            "message": "Welcome to ReleaseGuard AI API",
-            "status": "running"
-        }), 200
-
-    # API health check
-    @app.get("/api/v1/health")
-    def health_check():
-        return jsonify({
-            "status": "healthy",
-            "application": "releaseguard-api"
-        }), 200
-
-    # Database health check
-    @app.get("/api/v1/health/db")
+    @app.get("/health/db")
     def database_health():
         from sqlalchemy import text
 
         db.session.execute(text("SELECT 1"))
 
-        return jsonify({
-            "status": "healthy",
-            "database": "connected"
-        }), 200
+        return {
+            "status": "ok",
+            "database": "connected",
+        }
 
     return app
